@@ -135,24 +135,41 @@ $report->time(n)	returns the time in a specific format. n is the format code. Cu
 
  1    hh:mm 
 
-=head1 SPECIAL VARIABLES
+=item
 
+$report->eOR()		indicates the end of report
 
 =item
 
-$report->{EOR}		indicates the end of report
+$report->bOR()		indicates the begining of the report
 
 =item
 
-$report->{BOR}		indicates the begining of the report
+$report->bOP()		indicates the firts detail in the the page
 
 =item
 
-$report->{NEWPAGE}	indicates that a new page is required
+$report->width()	Report's width
 
 =item
 
-$report->{NEWREPORT}=FILE indicates that the data processed up to this point should be stored in file FILE.
+$report->height()	Report's height
+
+=item
+
+$report->islastbreak()	Returns true if it's the last processing break (using the cascade breaks approach)
+
+=item
+
+$report->iPB()	Returns true if the reporter is processing breaks (useful when you want or not to do something while processing breaks)
+
+=item
+
+$report->newpage([TIMES])	indicates that a new page is required. TIMES is the number of form feeds to do. By default is 1
+
+=item
+
+$report->newreport(FILE)		indicates that the data processed up to this point should be stored in file FILE.
 
 =head1 EVENT FUNCTIONS
 
@@ -273,7 +290,7 @@ This approach allows to have diferent data sources. At this point the only sourc
 
 package Data::Reporter;
 use vars qw($myself @ISA $VERSION);
-$VERSION = "1.0";
+$VERSION = "1.3";
 use Exporter();
 @ISA = qw(Exporter);
 use Data::Reporter::RepFormat;
@@ -283,21 +300,50 @@ use English;
 use File::Copy;
 $|=1;
 
+sub ACTLINE()          {0; }
+sub ACTREG()           {1; }
+sub BEGINOFPAGE()      {2; }
+sub BOR()              {3; }
+sub BREAKS()           {4; }
+sub DATAFORM()         {5; }
+sub EOR()              {6; }
+sub FILE_NAME()        {7; }
+sub FOOTER_SIZE()      {8; }
+sub FORMATFORM()       {9; }
+sub HEIGHT()           {10; }
+sub LASTBREAK()        {11; }
+sub LASTREG()          {12; }
+sub LINEAACT()         {13; }
+sub NEWPAGE()          {14; }
+sub NEWREP()           {15; }
+sub NEWREPORT()        {16; }
+sub ORIENTATION()      {17; }
+sub OS_WIN()           {18; }
+sub OUTPUTPATH()       {19; }
+sub PAGE()             {20; }
+sub PROCESSINGBREAKS() {21; }
+sub ROWS()             {22; }
+sub SOURCE()           {23; }
+sub SUBDETAIL()        {24; }
+sub SUBFINAL()         {25; }
+sub SUBFOOTER()        {26; }
+sub SUBHEADER()        {27; }
+sub SUBPRINT()         {28; }
+sub SUBTITLE()         {29; }
+sub TEMPNAME()         {30; }
+sub THEREISINFO()      {31; }
+sub WIDTH()            {32; }
+
 sub new (%) {
 	my $class = shift;
-	my $self={};
+	my $self=[];
 	bless $self, $class;
 	$self->_initialize();
 	if (@_ > 0) {
 		my %param = @_;
-		$self->_getparam(%param);
+		$self->configure(%param);
 	}
 	$self;
-}
-
-sub configure(%) {
-	my $self = shift;
-	$self->_getparam(@_);
 }
 
 sub generate($) {
@@ -306,26 +352,29 @@ sub generate($) {
 
 	$self->_init_report();
 
-	$self->{SOURCE}->getdata(\&_process_detail);
+	$self->[SOURCE]->getdata(\&_process_detail);
 
-	$self->{EOR} = 1;
-	$self->_process_detail(@{$self->{LASTREG}}) if ($self->{THEREISINFO});
+	$self->[EOR] = 1;
+	_process_detail(@{$self->[LASTREG]}) if ($self->[THEREISINFO]);
 
 	$self->_end_report();
 
-	if ($self->{THEREISINFO}) {
+	$self->[SOURCE]->close();
+
+	if ($self->[THEREISINFO]) {
 		return 0;
 	} else {
 		return 2;
 	}
 }
 
-sub page($$) {
-	my $self = shift;
-	my $op = shift;
+sub page($;$) {
+	my ($self, $op) = @_;
 	my $retval = "";
-	if ($op == 1) {
-		$retval = sprintf("%3d",$self->{PAGE});
+	if (!defined($op)) {
+		$retval = $self->[PAGE];
+	} elsif ($op == 1) {
+			$retval = sprintf("%3d",$self->[PAGE]);
 	}
 	return $retval;
 }
@@ -335,13 +384,7 @@ sub date($$) {
 	my $op = shift;
 	my $retval = "";
 	my @date = localtime();
-	my $year = $date[5];
-	if ($year > 100) {
-		$year -= 100;
-		$year = "20".$year;
-	} else {
-		$year = "19".$year;
-	}
+	my $year = $date[5]+1900;
 	
 	if ($op == 1) {
 		$retval = sprintf("%02s/%02s/%4s",$date[3],$date[4]+1,$year);
@@ -363,111 +406,174 @@ sub time($$) {
 	return $retval;
 }
 
+sub eOR($) {
+	my $self = shift;
+	return $self->[EOR];
+}
+
+sub bOR($) {
+	my $self = shift;
+	return $self->[BOR];
+}
+
+sub bOP($) {
+	my $self = shift;
+	return $self->[BEGINOFPAGE];
+}
+
+sub newpage($;$) {
+	my $self = shift;
+	my $npages = 1;
+	$npages = shift if (@_ > 0);
+
+	$self->[NEWPAGE] = $npages;
+}
+
+sub newreport($$) {
+	my $self = shift;
+	my $file = shift;
+	$self->[NEWREPORT] = $file;
+}
+
+sub width($) {
+	my $self = shift;
+	return $self->[WIDTH];
+}
+
+sub height($) {
+	my $self = shift;
+	return $self->[HEIGHT];
+}
+
+sub islastbreak($) {
+	my $self = shift;
+	return $self->[LASTBREAK];
+}
+
+sub iPB($) {
+	my $self = shift;
+	return $self->[PROCESSINGBREAKS];
+}
+
+sub configure(%){
+	my $self=shift;
+	my %param = @_;
+	foreach my $key (keys %param) {
+		if ($key eq "SubHeader") {
+			$self->[SUBHEADER] = $param{$key};
+		} elsif ($key eq "SubTitle") {
+			$self->[SUBTITLE] = $param{$key};
+		} elsif ($key eq "SubDetail") {
+			$self->[SUBDETAIL] = $param{$key};
+		} elsif ($key eq "SubFooter") {
+			$self->[SUBFOOTER] = $param{$key};
+		} elsif ($key eq "SubFinal") {
+			$self->[SUBFINAL] = $param{$key};
+		} elsif ($key eq "SubPrint") {
+			$self->[SUBPRINT] = $param{$key};
+		} elsif ($key eq "Source") {
+			$self->[SOURCE] = $param{$key};
+			croak "parameter Source is not a Data::Reporter::Datasource descendent\n"
+							unless ($self->[SOURCE]->isa("Data::Reporter::Datasource"));
+		} elsif ($key eq "Breaks") {
+			$self->_gen_breaks_info($param{$key});
+		} elsif ($key eq "File_name") {
+			$self->[FILE_NAME] = $param{$key};
+		} elsif ($key eq "Width") {
+			$self->[WIDTH] = $param{$key};
+			if ($self->[WIDTH] <= 0) {
+				croak "Invalid value ($self->[WIDTH]) for Width";
+			}
+			$self->_create_forms();
+		} elsif ($key eq "Height") {
+			$self->[HEIGHT] = $param{$key};
+			if ($self->[HEIGHT] <= 0) {
+				croak "Invalid value ($self->[HEIGHT]) for Height";
+			}
+			$self->[ROWS] = $self->[HEIGHT] - $self->[FOOTER_SIZE];
+			$self->_create_forms();
+		} elsif ($key eq "Footer_size") {
+			$self->[FOOTER_SIZE] = $param{$key};
+			if ($self->[FOOTER_SIZE] <= 0) {
+				croak "Invalid value ($self->[FOOTER_SIZE]) for Footer_size";
+			}
+			$self->[ROWS] = $self->[HEIGHT] - $self->[FOOTER_SIZE];
+		} elsif ($key eq "Orientation") {
+			if ($param{$key} ne "portrait" or $param{$key} ne "landscape") {
+				croak "Invalid orientation ($param{$key})";
+			}
+			$self->[ORIENTATION] = $param{$key};
+		} else {
+			croak "Parameter $key invalid (SubHeader, SubTitle, SubDetail, ".
+				"SubFooter, Breaks, Name, Width, Height)";
+		}
+	}
+}
+
 sub _initialize($) {
 	my $self = shift;
 	#create special variables
-	$self->{ACTLINE} = 1;	#line indicator inside the page
-	$self->{NEWPAGE} = 1;	#indicator to make new page
-	$self->{PAGE} = 0;		#page indicator
-	$self->{EOR} = 0;			#end of report indicator
-	$self->{LASTBREAK} = 0;	#indicator for last break to process
-	$self->{BOR} = 1;			#indicator for begin of report
-	$self->{NEWREP} = "";	#file to save the actual information and begin
+	$self->[ACTLINE] = 1;	#line indicator inside the page
+	$self->[NEWPAGE] = 0;	#indicator to make new page
+	$self->[PAGE] = 0;		#page indicator
+	$self->[EOR] = 0;			#end of report indicator
+	$self->[LASTBREAK] = 0;	#indicator for last break to process
+	$self->[BOR] = 1;			#indicator for begin of report
+	$self->[NEWREP] = "";	#file to save the actual information and begin
 							# a new report
-	$self->{OS_WIN} = $^O eq 'MSWin32';
+	$self->[PROCESSINGBREAKS] = 0;
+
+	$self->[OS_WIN] = $^O eq 'MSWin32';
 
 	#path to save work file
-	if ($self->{OS_WIN}) {
-		$self->{OUTPUTPATH} = "C:\\WINDOWS\\TEMP\\";
+	if ($self->[OS_WIN]) {
+		$self->[OUTPUTPATH] = "C:\\WINDOWS\\TEMP\\";
 	} else {
-		$self->{OUTPUTPATH} = "/tmp/";
+		$self->[OUTPUTPATH] = "/tmp/";
 	}
 
 	#default report size
-	$self->{WIDTH} = 80;
-	$self->{HEIGHT} = 60;
+	$self->[WIDTH] = 80;
+	$self->[HEIGHT] = 60;
 
 	#default rows
-	$self->{ROWS} = 60;
+	$self->[ROWS] = 60;
+	$self->[FOOTER_SIZE] = 0;
 
 	#create Forms
 	$self->_create_forms();
 
 	#create actual and last regs
-	$self->{ACTREG} = [];
-	$self->{LASTREG} = [];
+	$self->[ACTREG] = [];
+	$self->[LASTREG] = [];
 
-	$self->{ORIENTATION} = "portrait";
+	$self->[ORIENTATION] = "portrait";
 
 	#by default there is no info
-	$self->{THEREISINFO} = 0;
+	$self->[THEREISINFO] = 0;
 
 	#by default is not the last break to process
-	$self->{LASTBREAK}
+	$self->[LASTBREAK] = 0;
+
+	#temp name
+	$self->[TEMPNAME] = _newname();
+}
+
+sub _newname() {
+	srand(time() ^ ($$ + ($$ << 15)));
+	my $number = sprintf("%06.0f",rand(100)*10000);
+	my $name = "re$number.out";
+	return $name;
 }
 
 sub _create_forms($) {
 	my $self= shift;
 
 	#form for title, header and footer
-	$self->{FORMATFORM} = new Data::Reporter::RepFormat($self->{WIDTH}, $self->{HEIGHT});
+	$self->[FORMATFORM] = new Data::Reporter::RepFormat($self->[WIDTH], $self->[HEIGHT]);
 
 	#form from details and breaks
-	$self->{DATAFORM} = new Data::Reporter::RepFormat($self->{WIDTH}, $self->{HEIGHT});
-}
-
-sub _getparam(%){
-	my $self=shift;
-	my %param = @_;
-	foreach my $key (keys %param) {
-		if ($key eq "SubHeader") {
-			$self->{SUBHEADER} = $param{$key};
-		} elsif ($key eq "SubTitle") {
-			$self->{SUBTITLE} = $param{$key};
-		} elsif ($key eq "SubDetail") {
-			$self->{SUBDETAIL} = $param{$key};
-		} elsif ($key eq "SubFooter") {
-			$self->{SUBFOOTER} = $param{$key};
-		} elsif ($key eq "SubFinal") {
-			$self->{SUBFINAL} = $param{$key};
-		} elsif ($key eq "SubPrint") {
-			$self->{SUBPRINT} = $param{$key};
-		} elsif ($key eq "Source") {
-			$self->{SOURCE} = $param{$key};
-			croak "parameter Source is not a Data::Reporter::Datasource descendent\n"
-							unless ($self->{SOURCE}->isa("Data::Reporter::Datasource"));
-		} elsif ($key eq "Breaks") {
-			$self->_gen_breaks_info($param{$key});
-		} elsif ($key eq "File_name") {
-			$self->{FILE_NAME} = $param{$key};
-		} elsif ($key eq "Width") {
-			$self->{WIDTH} = $param{$key};
-			if ($self->{WIDTH} <= 0) {
-				croak "Invalid value ($self->{WIDTH}) for Width";
-			}
-			$self->_create_forms();
-		} elsif ($key eq "Height") {
-			$self->{HEIGHT} = $param{$key};
-			if ($self->{HEIGHT} <= 0) {
-				croak "Invalid value ($self->{HEIGHT}) for Height";
-			}
-			$self->_create_forms();
-		} elsif ($key eq "Footer_size") {
-			$self->{FOOTER_SIZE} = $param{$key};
-			if ($self->{FOOTER_SIZE} <= 0) {
-				croak "Invalid value ($self->{FOOTER_SIZE}) for Footer_size";
-			}
-			$self->{ROWS} = $self->{HEIGHT} - $self->{FOOTER_SIZE};
-		} elsif ($key eq "Orientation") {
-			if ($param{$key} ne "portrait" or $param{$key} ne "landscape") {
-				croak "Invalid orientation ($param{$key})";
-			}
-			$self->{ORIENTATION} = $param{$key};
-		} else {
-			croak "Parameter $key invalid (SubHeader, SubTitle, SubDetail, ".
-				"SubFooter, Breaks, Name, Width, Height)";
-		}
-	}
+	$self->[DATAFORM] = new Data::Reporter::RepFormat($self->[WIDTH], $self->[HEIGHT]);
 }
 
 sub _gen_breaks_info($%) {
@@ -476,31 +582,31 @@ sub _gen_breaks_info($%) {
 
 	foreach my $field (keys %{$breaks}) {
 		my @couple_val_routine = (0, $breaks->{$field});
-		$self->{BREAKS}->{$field}=\@couple_val_routine;
+		$self->[BREAKS]->{$field}=\@couple_val_routine;
 	}
 }
 
 sub _blank($) {
 	my $self=shift;
 	print OUTPUTFILE "\n";
-	$self->{ACTLINE}++;
+	$self->[ACTLINE]++;
 }
 
-sub _print_visform($$) {
+sub _print_visform($$;$) {
 	my $self = shift;
 	my $totlines = shift;
 	my $kind_of_info = shift;
 	my $format;
 
 	if ($kind_of_info == 1) {
-		$format = $self->{DATAFORM};
+		$format = $self->[DATAFORM];
 	} else {
-		$format = $self->{FORMATFORM};
+		$format = $self->[FORMATFORM];
 	}
 
 	my $aux = 0;
-	my $act_line = \$self->{ACTLINE};
-	my $rows = $self->{ROWS};
+	my $act_line = \$self->[ACTLINE];
+	my $rows = $self->[ROWS];
 	my $line = "";
 	while ($totlines > 0) {
 		$line = $format->Getline($aux);
@@ -514,82 +620,84 @@ sub _print_visform($$) {
 
 sub _print_header($) {
 	my $self = shift;
-	$self->{PAGE}++;
-	$self->{NEWPAGE} = 0 if ($self->{NEWPAGE});
-	$self->{LINEAACT} = 1;
-	$self->{FORMATFORM}->Clear();
-	&{$self->{SUBHEADER}}($self, $self->{FORMATFORM},
-										$self->{ACTREG}, $self->{LASTREG});
-	my $lines = $self->{FORMATFORM}->Nlines();
+	$self->[PAGE]++;
+	$self->[NEWPAGE] = 0 if ($self->[NEWPAGE]);
+	$self->[LINEAACT] = 1;
+	$self->[FORMATFORM]->Clear();
+	$self->[BEGINOFPAGE] = 1;
+	&{$self->[SUBHEADER]}($self, $self->[FORMATFORM],
+										$self->[ACTREG], $self->[LASTREG]);
+	my $lines = $self->[FORMATFORM]->Nlines();
 	$self->_print_visform($lines, 0);
-	$self->{ACTLINE} = $lines+1;
-	$self->{BEGINOFPAGE} = 1;
+	$self->[ACTLINE] = $lines+1;
 }
 
 sub _print_footer($) {
 	my $self = shift;
 
-	$self->{FORMATFORM}->Clear();
-	&{$self->{SUBFOOTER}}($self, $self->{FORMATFORM},
-										$self->{ACTREG}, $self->{LASTREG});
-	my $lines = $self->{FORMATFORM}->Nlines();
+	$self->[FORMATFORM]->Clear();
+	&{$self->[SUBFOOTER]}($self, $self->[FORMATFORM],
+										$self->[ACTREG], $self->[LASTREG]);
+	my $lines = $self->[FORMATFORM]->Nlines();
 
 	#check footer size
-	if ($lines > $self->{FOOTER_SIZE}) {
+	if ($lines > $self->[FOOTER_SIZE]) {
 		croak "Invalid number of lines of footer ($lines).".
-												"Must be $self->{FOOTER_SIZE}";
+												"Must be $self->[FOOTER_SIZE]";
 	}
 
 	#fill page with blanks
-	my $act_line = \$self->{ACTLINE};
-	my $rows = $self->{HEIGHT}-$self->{FOOTER_SIZE};
+	my $act_line = \$self->[ACTLINE];
+	my $rows = $self->[HEIGHT]-$self->[FOOTER_SIZE];
 	while ($$act_line <= $rows) {
 		$self->_blank();
 	}
 
 	#print footer
-	$self->_print_visform($self->{FOOTER_SIZE}, 0);
+	$self->_print_visform($self->[FOOTER_SIZE], 0);
 }
 
 sub _print_title($$) {
 	my $self = shift;
 	my $processing_info = shift;
-	$self->{FORMATFORM}->Clear();
+	$self->[FORMATFORM]->Clear();
 	if (!$processing_info) {
-		&{$self->{SUBTITLE}}($self, $self->{FORMATFORM},
-											$self->{ACTREG}, $self->{LASTREG});
+		&{$self->[SUBTITLE]}($self, $self->[FORMATFORM],
+											$self->[ACTREG], $self->[LASTREG]);
 	} else {
-		&{$self->{SUBTITLE}}($self, $self->{FORMATFORM},
-											$self->{LASTREG}, $self->{LASTREG});
+		&{$self->[SUBTITLE]}($self, $self->[FORMATFORM],
+											$self->[LASTREG], $self->[LASTREG]);
 	}
-	my $lines = $self->{FORMATFORM}->Nlines();
+	my $wantnewpage = $self->[NEWPAGE];
+	my $lines = $self->[FORMATFORM]->Nlines();
 	$self->_print_visform($lines, 0)
 						unless ($self->_checknewpage($lines, $processing_info));
+	$self->_newpage(0) if ($wantnewpage);
 }
 
 sub _newpage($$) {
 	my $self = shift;
 	my $processing_info = shift; #there is information from the previous
                                  #page
-	if ($self->{BOR} == 0) {
-		$self->_print_footer() if (defined($self->{SUBFOOTER}));
+	if ($self->[BOR] == 0) {
+		$self->_print_footer() if (defined($self->[SUBFOOTER]));
 		print OUTPUTFILE $FORMAT_FORMFEED;
 		my $aux = 1;
-		while ( $aux < $self->{NEWPAGE} ) {
+		while ( $aux < $self->[NEWPAGE] ) {
 			print OUTPUTFILE $FORMAT_FORMFEED;
 			$aux++;
 		}
-	} else {
-		my $forma="";
-		if ($self->{ORIENTATION} eq "landscape") {
-			$forma = 'E&l1O&l1S&l2E&a0L&l12D(s16H&l95F&k2G';
-			$forma =~ s/95/$self->{HEIGHT}/;
-		} elsif ($self->{ORIENTATION} eq "portrait"){
-		$forma = '&l95F';
-		$forma =~ s/95/$self->{HEIGHT}/;
-		}
-		print OUTPUTFILE $forma;
 	}
+#	} else {
+#		my $forma="";
+#		if ($self->[ORIENTATION] eq "landscape") {
+#			$forma = 'E&l1O&l1S&l2E&a0L&l12D(s16H&l95F&k2G';
+#			$forma =~ s/95/$self->[HEIGHT]/;
+#		} elsif ($self->[ORIENTATION] eq "portrait"){
+# 			$forma = '&l95F';
+# 			$forma =~ s/95/$self->[HEIGHT]/;
+#		}
+#		print OUTPUTFILE $forma;
 
 	$self->_print_header();
 	$self->_print_title($processing_info);
@@ -597,14 +705,17 @@ sub _newpage($$) {
 
 sub _print_file($) {
 	my $self = shift;
-	&{$self->{SUBPRINT}}($self, "$self->{OUTPUTPATH}$self->{FILE_NAME}");
+	copy "$self->[OUTPUTPATH]/$self->[TEMPNAME]", $self->[FILE_NAME];
+	unlink "$self->[OUTPUTPATH]/$self->[TEMPNAME]";
+	&{$self->[SUBPRINT]}($self, $self->[FILE_NAME])
+			if (defined($self->[SUBPRINT]));
 }
 
 sub _newrep($) {
 	my $self = shift;
 	close(OUTPUTFILE);
-	$self->_print_file() if (defined($self->{SUBPRINT}));
-	$self->{FILE_NAME} = $self->{NEWREP};
+	$self->_print_file();
+	$self->[FILE_NAME] = $self->[NEWREP];
 	$self->_init_report();
 }
 
@@ -614,7 +725,7 @@ sub _checknewpage($$) {
 	my $processing_info = shift;
 	my $retval = 0;
 
-	if ($rowstoprint + $self->{ACTLINE} - 1 > $self->{ROWS}) {
+	if ($rowstoprint + $self->[ACTLINE] - 1 > $self->[ROWS]) {
 		$self->_newpage($processing_info);
 		$retval = 1;
 	}
@@ -623,16 +734,17 @@ sub _checknewpage($$) {
 
 sub _process_breaks() {
 	my $self = shift;
-	my $regact = $self->{ACTREG};
+	my $regact = $self->[ACTREG];
 	my @couple_val_routine;
 	my @indexes_array= ();
 	my $index = 0;
 	my $maxindex = -1;
-	my $breaks = $self->{BREAKS};
+	my $breaks = $self->[BREAKS];
+	$self->[PROCESSINGBREAKS] = 1;
 	foreach my $field (sort(keys %{$breaks}) ) {
 		@couple_val_routine = @{$breaks->{$field}};
-		if (($self->{EOR} || $couple_val_routine[0] ne @{$regact}[$field])
-													&& $self->{BOR} != 1) {
+		if (($self->[EOR] || $couple_val_routine[0] ne @{$regact}[$field])
+													&& $self->[BOR] != 1) {
 			$maxindex = $index;
 		}
 		$indexes_array[$index] = $field;
@@ -645,55 +757,57 @@ sub _process_breaks() {
 	while ($index <= $maxindex) {
 		@couple_val_routine = @{$breaks->{$indexes_array[$index]}};
 		$index++;
-		$self->{LASTBREAK} = 1 if ($index > $maxindex);
-		$self->{DATAFORM}->Clear();
+		$self->[LASTBREAK] = 1 if ($index > $maxindex);
+		$self->[DATAFORM]->Clear();
 		$newpage = 0;
-		&{$couple_val_routine[1]}($self, $self->{DATAFORM},
-											$self->{LASTREG}, $self->{LASTREG});
-		my $lines = $self->{DATAFORM}->Nlines();
-		$newpage = $self->{NEWPAGE} if ($self->{NEWPAGE});
+		&{$couple_val_routine[1]}($self, $self->[DATAFORM],
+											$self->[LASTREG], $self->[LASTREG]);
+		my $lines = $self->[DATAFORM]->Nlines();
+		$newpage = $self->[NEWPAGE] if ($self->[NEWPAGE]);
 		if ($lines) {
 			$self->_checknewpage($lines, 1);
 			$self->_print_visform($lines, 1);
-			if ($newpage) {
-				if ($index > $maxindex) {
-					$self->_newpage(0);
-				} else {
-				$self->{NEWPAGE} = $newpage;
+			$self->[BEGINOFPAGE] = 0;
+		}
+		if ($newpage) {
+			if ($index > $maxindex) {
+				$self->_newpage(0);
+			} else {
+				$self->[NEWPAGE] = $newpage;
 				$self->_newpage(1);
-				}
 			}
 		}
 	}
 
-	$self->{LASTBREAK} = 0;
-	$self->_newrep() if ($self->{NEWREP} ne "");
-	if (($index > 0) && ($self->{EOR} == 0) && ($self->{NEWREP} eq "")
-											&& (!$self->{BEGINOFPAGE})) {
-		$self->_blank();
+	$self->[LASTBREAK] = 0;
+	$self->[PROCESSINGBREAKS] = 0;
+	$self->_newrep() if ($self->[NEWREP] ne "");
+	if (($index > 0) && ($self->[EOR] == 0) && ($self->[NEWREP] eq "")
+											&& (!$self->[BEGINOFPAGE])) {
 		$self->_print_title(0);
 	}
-	$self->{NEWREP} = "";
+	$self->[NEWREP] = "";
 }
 
 sub _print_detail($) {
 	my $self = shift;
-	$self->{DATAFORM}->Clear();
-	&{$self->{SUBDETAIL}}($self, $self->{DATAFORM},
-											$self->{ACTREG}, $self->{LASTREG});
-	my $lines = $self->{DATAFORM}->Nlines();
+	$self->_checknewpage(1, 0);
+	$self->[DATAFORM]->Clear();
+	&{$self->[SUBDETAIL]}($self, $self->[DATAFORM],
+											$self->[ACTREG], $self->[LASTREG]);
+	my $lines = $self->[DATAFORM]->Nlines();
 	$self->_checknewpage($lines, 0);
 	$self->_print_visform($lines, 1);
-	$self->{BEGINOFPAGE} = 0;
-	$self->_newpage(0) if ($self->{NEWPAGE});
+	$self->[BEGINOFPAGE] = 0;
+	$self->_newpage(0) if ($self->[NEWPAGE]);
 }
 
 sub _print_final($) {
 	my $self = shift;
-	$self->{DATAFORM}->Clear();
-	&{$self->{SUBFINAL}}($self, $self->{DATAFORM},
-											$self->{ACTREG}, $self->{LASTREG});
-	my $lines = $self->{DATAFORM}->Nlines();
+	$self->[DATAFORM]->Clear();
+	&{$self->[SUBFINAL]}($self, $self->[DATAFORM],
+											$self->[ACTREG], $self->[LASTREG]);
+	my $lines = $self->[DATAFORM]->Nlines();
 	$self->_checknewpage($lines, 0);
 	$self->_print_visform($lines, 1);
 }
@@ -702,38 +816,38 @@ sub _process_detail(@) {
 	my $self = $myself;
 	my @act_data = @_;
 
-	$self->{THEREISINFO} = 1;
-	$self->{ACTREG} = \@act_data;
+	$self->[THEREISINFO] = 1;
+	$self->[ACTREG] = \@act_data;
 
-	$self->_newpage(0) if ($self->{BOR});
+	$self->_newpage(0) if ($self->[BOR]);
 
-	$self->_process_breaks() if (defined($self->{BREAKS}));
+	$self->_process_breaks() if (defined($self->[BREAKS]));
 
-	$self->_print_detail() unless ($self->{EOR});
+	$self->_print_detail() unless ($self->[EOR]);
 
-	if ($self->{EOR}) {
-		if (defined($self->{SUBFINAL})){
+	if ($self->[EOR]) {
+		if (defined($self->[SUBFINAL])){
 			$self->_print_final();
 		}
-		$self->_print_footer() if (defined($self->{SUBFOOTER}));
+		$self->_print_footer() if (defined($self->[SUBFOOTER]));
 	}
-	$self->{BOR} = 0;
-	$self->{LASTREG} = $self->{ACTREG};
+	$self->[BOR] = 0;
+	$self->[LASTREG] = $self->[ACTREG];
 }
 
 sub _init_report($) {
 	my $self=shift;
-	open (OUTPUTFILE, ">$self->{OUTPUTPATH}/report.out")
-										|| croak "Can't create file report.out";
-	$self->{PAGE} = 0;
-	$self->{BOR}=1;
+	open (OUTPUTFILE, ">$self->[OUTPUTPATH]/$self->[TEMPNAME]")
+										|| croak "Can't create file $self->[TEMPNAME]";
+	$self->[PAGE] = 0;
+	$self->[EOR] = 0;
+	$self->[BOR]=1;
 }
 
 sub _end_report($) {
 	my $self=shift;
 	close OUTPUTFILE;
-	$self->_print_file() if (defined($self->{SUBPRINT}));
-	copy "$self->{OUTPUTPATH}/report.out", $self->{FILE_NAME};
+	$self->_print_file();
 }
 
 sub DataReporterVersion {

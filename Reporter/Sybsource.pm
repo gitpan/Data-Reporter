@@ -34,21 +34,29 @@ valid options are:
 
 =item
 
-File			Information file about connection login. The file must have the following information: user, password, database, server. These items must come in this order, each on a separate line.
+File			Information file about connection login. The file must have the following information: user, password, database, server. database and server can be defined as "default", so the conexion uses the server defaults. These items must come in this order, each on a separate line.
 
 =item
 
-Arguments		array reference with the following information: usr, pwd, db, srv. This can be used instead of the File option
+Arguments		array reference with the following information: usr, pwd , db, srv. db and srv can be "undef" so the conexion uses the server defaults. This can be used instead of the File option
 
 =item
 
 query		string with the query to execute to retrive the data
+
+=item
+
+Handler		Sybase conexion handler. The class uses this handler to perform the query
 
 =back 4
 
 =item $source->getdata($subru)
 
 For each record of the query result, calls the function $subru, sending the record as parameter
+
+=item $source->close()
+
+Close sybase connection
 
 =cut
 
@@ -78,11 +86,13 @@ sub configure($%) {
 			$self->{CONNECTIONINFO} = $self->_getfileparams($param{$key});
 		} elsif ($key eq "Arguments") {
 			my @data = @{$param{$key}};
-			croak "Invalid arguments for conexion  (usr, pwd, db, srv)!!!"
+			croak "Invalid arguments for conexion  (usr, pwd , db, srv)!!!"
 				if (@data < 4);
 			$self->{CONNECTIONINFO} = \@data;
 		} elsif ($key eq "Query") {
 			$self->{QUERY} = $param{$key};
+		} elsif ($key eq "Handler") {
+			$self->{DBH} = $param{$key};
 		}
 	}
 }
@@ -92,7 +102,7 @@ sub getdata($$) {
 	my $routine = shift;
 	croak "Query has not been defined!!!" unless (defined($self->{QUERY}));
 	croak "Connection has not been defined!!!"
-									unless (defined($self->{CONNECTIONINFO}));
+									unless (defined($self->{DBH}));
 	$self->{DBH}->sql($self->{QUERY}, $routine);
 }
 
@@ -113,17 +123,32 @@ sub _getfileparams($$) {
 	chomp($pas);
 	chomp($db);
 	chomp($srv);
+	$db = undef if ($db eq "default");
+	$srv = undef if ($srv eq "default");
+
 	return [$usr, $pas, $db, $srv];
 }
 
 sub _connect($) {
 	my $self = shift;
+	return if (defined($self->{DBH}));
+
 	my ($usr, $pass, $db, $srv) = @{$self->{CONNECTIONINFO}};
-	$self->{DBH} = new Sybase::DBlib $usr, $pass, $srv;
-	croak "Conexion failed with user = $usr, password = $pass, server $srv"
+	if (defined($srv)) {
+		$self->{DBH} = new Sybase::DBlib $usr, $pass, $srv;
+		croak "Conexion failed with user = $usr, password = $pass, server $srv"
 												unless (defined($self->{DBH}));
-	$self->{DBH}->dbuse($db);
+	} else {
+		$self->{DBH} = new Sybase::DBlib $usr, $pass;
+		croak "Conexion failed with user = $usr, password = $pass"
+												unless (defined($self->{DBH}));
+	}
+
+	$self->{DBH}->dbuse($db) if (defined($db));
 }
 
-
+sub close($) {
+	my $self = shift;
+	$self->{DBH}->dbclose();
+}
 1;

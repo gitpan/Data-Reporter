@@ -10,7 +10,6 @@ use vars qw ($visrep);
 sub resize() {
 	$visrep->{VSIZEX} = $visrep->{WSIZEX}->get();
 	$visrep->{VSIZEY} = $visrep->{WSIZEY}->get();
-
 	$visrep->{ACTUAL_SEC}->configure(Size	=> $visrep->{WSIZEVAREA}->get(),
 									Width	=> $visrep->{VSIZEX});
 	$visrep->{TOPWIN}->configure(width	=> $visrep->{VSIZEX},
@@ -239,37 +238,39 @@ sub save() {
 
 	#open output file
 	my $error=0;
-	open OUTPUTFILE, ">$visrep->{PROGRAMNAME}" or $error=1;
+	open OUT, ">$visrep->{PROGRAMNAME}" or $error=1;
 	if ($error) {
 		gen_error("Can't create $visrep->{PROGRAMNAME}");
 		return;
 	}
 
 	#print unix command
-	print OUTPUTFILE "#!/usr/local/bin/perl\n";
+	print OUT "#!/usr/local/bin/perl\n";
 
 	#print dimensions
-	print OUTPUTFILE "#SIZE $visrep->{VSIZEX} $visrep->{VSIZEY}\n";
+	print OUT "#SIZE $visrep->{VSIZEX} $visrep->{VSIZEY}\n";
 
-	#print ORIENTATION
-	print OUTPUTFILE "#ORIENTATION $visrep->{ORIENTATION}\n";
+	#print output file
+	print OUT "#OUTPUTFILE $visrep->{OUTPUTFILE}\n";
 
 	#print source
 	if ($visrep->{SOURCE} eq "Filesource") {
-		print OUTPUTFILE "#SOURCE Filesource $visrep->{SOURCEFILENAME}\n";
+		print OUT "#SOURCE Filesource $visrep->{SOURCEFILENAME}\n";
 	} else {
-		print OUTPUTFILE "#SOURCE $visrep->{SOURCE} ";
+		print OUT "#SOURCE $visrep->{SOURCE} ";
 		if ($visrep->{CONNECTION} eq "file") {
-			print OUTPUTFILE "$visrep->{CONNECTIONFILENAME}\n";
+			print OUT "$visrep->{CONNECTIONFILENAME}\n";
 		} else {
-			print "0\n";
+			print OUT "0\n";
 		}
-		print OUTPUTFILE "#QUERY $visrep->{QUERY}\n";
+		map {
+			print OUT "#QUERY $_\n";
+		} split(/\n/, $visrep->{QUERY});
 	}
 
 	#print uses section
-	print OUTPUTFILE "#SECTION: DEFAULT_USES 0\n";
-	print OUTPUTFILE "#CODE AREA\n";
+	print OUT "#SECTION: DEFAULT_USES 0\n";
+	print OUT "#CODE AREA\n";
 	$visrep->{USES_EXTRACODE} = "use strict;\nuse Data::Reporter;\n".
 											"use Data::Reporter::RepFormat;\n";
 	if ($visrep->{SOURCE} eq "Filesource") {
@@ -277,30 +278,30 @@ sub save() {
 	} else {
 		$visrep->{USES_EXTRACODE} .= "use Data::Reporter::$visrep->{SOURCE};\n";
 	}
-	print OUTPUTFILE $visrep->{USES_EXTRACODE};
-	print OUTPUTFILE "#END\n";
+	print OUT $visrep->{USES_EXTRACODE};
+	print OUT "#END\n";
 
 	#print uses section
-	$visrep->{USES_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{USES_SEC}->generate(\*OUT);
 
 	#print header section
-	$visrep->{HEADER_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{HEADER_SEC}->generate(\*OUT);
 
 	#print title section
-	$visrep->{TITLE_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{TITLE_SEC}->generate(\*OUT);
 
 	#print detail section
-	$visrep->{DETAIL_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{DETAIL_SEC}->generate(\*OUT);
 
 	#print functions section
-	$visrep->{FUNCTIONS_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{FUNCTIONS_SEC}->generate(\*OUT);
 
 	#print footer section
-	$visrep->{FOOTER_SEC}->generate(\*OUTPUTFILE)
+	$visrep->{FOOTER_SEC}->generate(\*OUT)
 										if (defined($visrep->{FOOTER_SEC}));
 
 	#print final section
-	$visrep->{FINAL_SEC}->generate(\*OUTPUTFILE)
+	$visrep->{FINAL_SEC}->generate(\*OUT)
 										if (defined($visrep->{FINAL_SEC}));
 
 	#print breaks
@@ -308,18 +309,18 @@ sub save() {
 		my $cont;
 		for ($cont = 1; $cont <= $visrep->{VBREAKS}; $cont++) {
 			my $name_break =  "BREAK_".$cont;
-			$visrep->{$name_break}->generate(\*OUTPUTFILE);
+			$visrep->{$name_break}->generate(\*OUT);
 			my $break_field = $visrep->{$name_break}->break_field();
 			$visrep->{BREAKS}->{$break_field} = "\\&$name_break";
 		}
 	}
 
 	#print main section
-	$visrep->{MAIN_SEC}->generate(\*OUTPUTFILE);
+	$visrep->{MAIN_SEC}->generate(\*OUT);
 
 	#print default main
-	print OUTPUTFILE "\n#SECTION: DEFAULT_MAIN 0\n";
-	print OUTPUTFILE "#CODE AREA\n";
+	print OUT "\n#SECTION: DEFAULT_MAIN 0\n";
+	print OUT "#CODE AREA\n";
 	my $code="";
 	if ($visrep->{VBREAKS} > 0) {
 		$code .= "\tmy %rep_breaks = ();\n";
@@ -336,7 +337,7 @@ sub save() {
 						"\"$visrep->{CONNECTIONFILENAME}\",\n";
 		}elsif ($visrep->{CONNECTION} eq "arguments") {
 			$code .= "\tmy \$source = new Data::Reporter::$visrep->{SOURCE}(Arguments => ".
-						"\@ARGV,\n";
+						"\\\@ARGV,\n";
 		}
 		$code .= "\t\tQuery => '$visrep->{QUERY}');\n";
 	}
@@ -345,8 +346,11 @@ sub save() {
 	$code .= "\t\$report->configure(\n";
 	$code .= "\t\tWidth\t=> $visrep->{VSIZEX},\n";
 	$code .= "\t\tHeight\t=> $visrep->{VSIZEY},\n";
-	$code .= "\t\tSubFooter\t=> \\&FOOTER,\n"
-   									if (defined($visrep->{FOOTER_SEC}));
+  	if (defined($visrep->{FOOTER_SEC})) {
+		$code .= "\t\tSubFooter\t=> \\&FOOTER,\n";
+		my $size = $visrep->{FOOTER_SEC}->size();
+		$code .= "\t\tFooter_size\t=> $size,\n";
+	}
 	$code .= "\t\tSubFinal \t=> \\&FINAL,\n"
    									if (defined($visrep->{FINAL_SEC}));
 	$code .= "\t\tBreaks\t=> \\%rep_breaks,\n" if ($visrep->{VBREAKS} > 0);
@@ -357,11 +361,11 @@ sub save() {
 	$code .= "\t\tFile_name\t=> \"$visrep->{OUTPUTFILE}\"\n";
 	$code .= "\t);\n";
 	$code .= "\t\$report->generate();\n";
-	print OUTPUTFILE $code;
-	print OUTPUTFILE "#END\n";
+	print OUT $code;
+	print OUT "#END\n";
 
 	#close output file
-	close OUTPUTFILE;
+	close OUT;
 }
 
 
@@ -557,25 +561,6 @@ sub create_menu() {
 									variable    => \$visrep->{CONNECTION}
 								);
 
-	#create the orientation menu
-	my $orientation_menu = $menu_bar->Menubutton(text   	=> 'Orientation',
-													relief	=> 'raised',
-												borderwidth => 2,
-												)->pack(side  => 'left',
-														padx  => 2
-														);
-												
-	#File option
-	$orientation_menu->radiobutton(-label		=> 'Portrait',
-									value       => 'portrait',
-									variable    => \$visrep->{ORIENTATION}
-								);
-
-	#Argument option
-	$orientation_menu->radiobutton(-label		=> 'Landscape',
-									value       => 'landscape',
-									variable    => \$visrep->{ORIENTATION}
-								);
 }
 
 sub delete_extrasections() {
@@ -634,15 +619,10 @@ sub parse_file() {
 			$visrep->{WSIZEX}->insert(0.1, $visrep->{VSIZEX});
 			$visrep->{WSIZEY}->delete(0.1, 'end');
 			$visrep->{WSIZEY}->insert(0.1, $visrep->{VSIZEY});
-		} elsif ($line =~ /#ORIENTATION (\w+)/) {
-			if ($1 ne "portrait" && $1 ne "landscape") {
-				gen_error("Incorrect orientation ($1). line $index!!!");
-				defaults();
-				return;
-			}
-			$visrep->{ORIENTATION} = $1;
 		} elsif ($line =~ /#QUERY (\w.*)$/) {
-			$visrep->{QUERY} = $1;
+			$visrep->{QUERY} .= "$1\n";
+		} elsif ($line =~ /#OUTPUTFILE (\w.*)$/) {
+			$visrep->{OUTPUTFILE} = $1;
 		} elsif ($line =~ /#SOURCE ([^\s]+) ([^\s]+)/) {
 			if ($1 eq "Filesource") {
 				$visrep->{SOURCE} = $1;
@@ -873,7 +853,8 @@ sub ask_sourcefile() {
 }
 
 sub ask_query() {
-	my $dialog = $visrep->{TOPWIN}->DialogBox(-title => "Query to execute");
+	my $dialog = $visrep->{TOPWIN}->DialogBox(-title => "Query to execute",
+											-default_button => "none");
 	my $textquery = $dialog->Text(width => 50,
 								relief	=> 'groove',
 								height	=> 5)->pack(side => 'top', fill	=> 'x');
@@ -955,9 +936,6 @@ sub defaults() {
 
 	#default connection
 	$visrep->{CONNECTION} = "arguments";
-
-	#default orientation
-	$visrep->{ORIENTATION} = "portrait";
 
 	#default query
 	$visrep->{QUERY} = "";

@@ -84,7 +84,7 @@ Returns the section's break_field
 
 =item $section->lines()
 
-Returns the section`s lines
+Returns an array with the section`s lines
 
 =item $section->code()
 

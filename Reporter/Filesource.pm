@@ -84,4 +84,7 @@ sub getdata($$) {
 	}
 }
 
+sub close($) {
+
+}
 1;

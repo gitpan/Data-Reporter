@@ -31,4 +31,8 @@ sub getdata($) {
 	croak "Function getdata should be defined!!!";
 }
 
+sub close($) {
+	my $self = shift;
+	croak "Function close should be defined!!!";
+}
 1;
