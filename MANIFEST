@@ -7,6 +7,7 @@ Reporter/Filesource.pm
 Reporter/RepFormat.pm
 Reporter/Sybsource.pm
 Reporter/Orasource.pm
+Reporter/IBsource.pm
 Reporter/VisSection.pm
 Reporter/RepFormat.xs
 Reporter/Makefile.PL

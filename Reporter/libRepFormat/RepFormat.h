@@ -30,4 +30,6 @@ int  RepFormat_Nlines(RepFormat *self);
 void RepFormat_Skip(RepFormat *self, int rows);
 void RepFormat_Copy(RepFormat *self, RepFormat *other); 
 void RepFormat_Destroy(RepFormat *self);
+int  RepFormat_getX(RepFormat *self);
+int  RepFormat_getY(RepFormat *self);
 #endif

@@ -192,6 +192,16 @@ RepFormat_Nlines(self)
 	RepFormat *	self
 	PROTOTYPE: $
 
+int
+RepFormat_getX(self)
+	RepFormat *	self
+	PROTOTYPE: $
+
+int
+RepFormat_getY(self)
+	RepFormat *	self
+	PROTOTYPE: $
+
 void
 RepFormat_Skip(self, ...)
 	RepFormat *	self

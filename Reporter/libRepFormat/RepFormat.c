@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <math.h>
@@ -345,7 +346,7 @@ char *RepFormat_ToPicture(char *value, char *picture) {
 						return invalid(size, ret);
 			}
 		}
-		numval = atof(value);
+		numval = strtod(value, (char **) NULL);
 		num_picture(numval, picture, ret);
 	}
 	return ret;
@@ -501,6 +502,14 @@ char *RepFormat_Getline(RepFormat *self, int row) {
 
 int RepFormat_Nlines(RepFormat *self) {
 	return self->MAXROW + 1;
+}
+
+int RepFormat_getX(RepFormat *self) {
+	return self->X;
+}
+
+int RepFormat_getY(RepFormat *self) {
+	return self->Y;
 }
 
 void RepFormat_Skip(RepFormat *self, int rows) {

@@ -158,6 +158,14 @@ Moves, then Prints (using printf style format)
 
 Returns the number of lines in the sheet, discarding the last blank lines
 
+=item $sheet->getX()
+
+Returns current column position (X)
+
+=item $sheet->getY()
+
+Returns current row position (Y)
+
 =item $sheet->Getline($index)
 
 Returns the $index row 

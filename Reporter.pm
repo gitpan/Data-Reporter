@@ -110,6 +110,11 @@ SubFinal		function reference, which is called when all data has been processed
 
 SubPrint		function reference, which is called when the report is created
 
+# als, 2001-04-10
+=item
+
+User_data		hash reference with data that can be used in each function called during the creation of the report ($hash_ref = $self->[USER_DATA]; $hash_ref->{my_data})
+
 =back
 
 =item
@@ -124,10 +129,12 @@ $report->page()		returns the page number
 
 =item
 
-$report->date(n)	returns the date in a specific format. n is the format code. Currently, there are only 2 formats 
+# als, 2001-02-16
+$report->date(n)	returns the date in a specific format. n is the format code. Currently, there are only 3 formats 
 
  1		dd/mm/aaaa
  2		mm/dd/aaaa
+ 3		aaaa-mm-dd
 
 =item
 
@@ -290,7 +297,7 @@ This approach allows to have diferent data sources. At this point the only sourc
 
 package Data::Reporter;
 use vars qw($myself @ISA $VERSION);
-$VERSION = "1.3.1";
+$VERSION = "1.4";
 use Exporter();
 @ISA = qw(Exporter);
 use Data::Reporter::RepFormat;
@@ -333,6 +340,8 @@ sub SUBTITLE()         {29; }
 sub TEMPNAME()         {30; }
 sub THEREISINFO()      {31; }
 sub WIDTH()            {32; }
+#als, 2001-04-10
+sub USER_DATA()        {33; }
 
 sub new (%) {
 	my $class = shift;
@@ -390,6 +399,9 @@ sub date($$) {
 		$retval = sprintf("%02s/%02s/%4s",$date[3],$date[4]+1,$year);
 	} elsif ($op == 2) {
 		$retval = sprintf("%02s/%02s/%4s",$date[4]+1,$date[3],$year);
+	# als, 2001-02-16
+	} elsif ($op == 3) {
+		$retval = sprintf("%4s-%02s-%02s",$year,$date[4]+1,$date[3]);
 	}
 	return $retval;
 }
@@ -438,6 +450,12 @@ sub newreport($$) {
 sub width($) {
 	my $self = shift;
 	return $self->[WIDTH];
+}
+
+# als, 2001-04-10
+sub userdata($) {
+	my $self = shift;
+	return $self->[USER_DATA];
 }
 
 sub height($) {
@@ -503,6 +521,9 @@ sub configure(%){
 				croak "Invalid orientation ($param{$key})";
 			}
 			$self->[ORIENTATION] = $param{$key};
+		# als, 2001-04-10
+		} elsif ($key eq "User_data") {
+			$self->[USER_DATA] = $param{$key};
 		} else {
 			croak "Parameter $key invalid (SubHeader, SubTitle, SubDetail, ".
 				"SubFooter, Breaks, Name, Width, Height)";
@@ -560,7 +581,9 @@ sub _initialize($) {
 }
 
 sub _newname() {
-	srand(time() ^ ($$ + ($$ << 15)));
+ 	# als, 2001-02-16
+	#srand(time() ^ ($$ + ($$ << 15)));
+	srand(CORE::time() ^ ($$ + ($$ << 15)));
 	my $number = sprintf("%06.0f",rand(100)*10000);
 	my $name = "re$number.out";
 	return $name;
@@ -618,15 +641,28 @@ sub _print_visform($$;$) {
 }
 
 
-sub _print_header($) {
+#	als, 2001-05-09
+#sub _print_header($) {
+sub _print_header($$) {
 	my $self = shift;
+	# als, 2001-05-09
+	my $processing_info = shift;
+
 	$self->[PAGE]++;
 	$self->[NEWPAGE] = 0 if ($self->[NEWPAGE]);
 	$self->[LINEAACT] = 1;
 	$self->[FORMATFORM]->Clear();
 	$self->[BEGINOFPAGE] = 1;
-	&{$self->[SUBHEADER]}($self, $self->[FORMATFORM],
-										$self->[ACTREG], $self->[LASTREG]);
+	#	als, 2001-05-09
+	#&{$self->[SUBHEADER]}($self, $self->[FORMATFORM],
+	#									$self->[ACTREG], $self->[LASTREG]);
+	if (!$processing_info) {
+		&{$self->[SUBHEADER]}($self, $self->[FORMATFORM],
+											$self->[ACTREG], $self->[LASTREG]);
+	} else {
+		&{$self->[SUBHEADER]}($self, $self->[FORMATFORM],
+											$self->[LASTREG], $self->[LASTREG]);
+	}
 	my $lines = $self->[FORMATFORM]->Nlines();
 	$self->_print_visform($lines, 0);
 	$self->[ACTLINE] = $lines+1;
@@ -699,7 +735,9 @@ sub _newpage($$) {
 #		}
 #		print OUTPUTFILE $forma;
 
-	$self->_print_header();
+	#	als, 2001-05-09
+	#$self->_print_header();
+	$self->_print_header($processing_info);
 	$self->_print_title($processing_info);
 }
 

@@ -52,6 +52,7 @@ For each record of the query result, calls the function $subru, sending the reco
 =head1 AUTHOR
 	
 	Vecchio Fabrizio <jacote@tiscalinet.it> FABRVEC
+
 =cut
 
 package Data::Reporter::Orasource;

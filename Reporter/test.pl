@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..9\n"; }
+BEGIN { $| = 1; print "1..11\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Data::Reporter::RepFormat;
 $loaded = 1;
@@ -24,7 +24,7 @@ print "ok 1\n";
 	$format->Print("Hola!!");
 	$format->MVPrintP(0,1,123.45,"999,999.99");
 	($format->Getline(0) eq "Hola!!") ? print "ok 2\n" : print "nok 2\n";
-	($format->Getline(1) eq "    123.45") ? print "ok 3\n" : print "nok 3\n";
+	($format->Getline(1) eq "    123.45") ? print "ok 3\n" : print "nok 3 ",$format->Getline(2), "\n";
 	$format->Skip(2);
 	$format->Printf("%s","Hola");	
 	($format->Getline(3) eq "Hola") ? print "ok 4\n" : print "nok 4\n";
@@ -41,4 +41,7 @@ print "ok 1\n";
 	$format2->Print("Hola!!");
 	$format->Copy($format2);
 	($format->Nlines() == 6) ? print "ok 9\n" : print "nok 9\n";
+	$format->Move(6,7);
+	($format->getX() == 6) ? print "ok 10\n" : print "nok 10\n";
+	($format->getY() == 7) ? print "ok 11\n" : print "nok 11\n";
 }
