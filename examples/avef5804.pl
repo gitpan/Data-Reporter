@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 use strict;
-use Data::Reporter::Reporter;
+use Data::Reporter;
 use Data::Reporter::RepFormat;
 use Data::Reporter::Sybsource;
 use Sybase::Sybperl;
@@ -143,9 +143,9 @@ sub BREAK_2($$$$) {
 	my %rep_breaks = ();
 	$rep_breaks{0} = \&BREAK_1;
 	$rep_breaks{2} = \&BREAK_2;
-	my $source = new Sybsource(File => "sybase.cfg",
+	my $source = new Data::Reporter::Sybsource(File => "sybase.cfg",
 		Query => 'select d.flfactura, clcliente, clfuerzavta, clruta, clproducto, mnprecxpzas, mnoftadesc, mndescuento from kdfactura d, kgfactura g where d.flfactura = g.flfactura and clstatusfact = "GU" and clcliente = 5982243 order by clfuerzavta, flfactura');
-	my $report = new Reporter();
+	my $report = new Data::Reporter();
 	$report->configure(
 		Width	=> 80,
 		Height	=> 66,

@@ -15,11 +15,11 @@ The method 'getdata', should be defined in each source data type.
 
 =cut
 
-package Datasource;
+package Data::Reporter::Datasource;
 use strict;
 use Carp;
 
-sub new (%) {
+sub new(%) {
 	my $class = shift;
 	my $self={};
 	bless $self, $class;

@@ -6,7 +6,7 @@
 #SECTION: DEFAULT_USES 0
 #CODE AREA
 use strict;
-use Data::Reporter::Reporter;
+use Data::Reporter;
 use Data::Reporter::RepFormat;
 use Data::Reporter::Sybsource;
 #END
@@ -27,8 +27,8 @@ sub HEADER($$$$) {
 	$field[0] = $sheet->Center($filial, 80);
 #OUTPUT AREA
 #ORIG LINE                              CASA AUTREY S.A. DE C.V                  @D1
-	$sheet->MVPrint(29, 0,"CASA AUTREY S.A. DE C.V                  ");
 	$sheet->MVPrint(70, 0,$report->date(1));
+	$sheet->MVPrint(29, 0,"CASA AUTREY S.A. DE C.V                  ");
 #ORIG LINE @F0
 	$sheet->MVPrint(0, 1,$field[0]);
 #ORIG LINE                               LOCAL INVOICE SYSTEM
@@ -89,10 +89,10 @@ sub DETAIL($$$$) {
 	$totdescuento += $rep_actline->[7];
 #OUTPUT AREA
 #ORIG LINE @F0                                @F1            @F2            @F3
-	$sheet->MVPrint(35, 0,$field[1]);
 	$sheet->MVPrint(0, 0,$field[0]);
-	$sheet->MVPrint(65, 0,$field[3]);
 	$sheet->MVPrint(50, 0,$field[2]);
+	$sheet->MVPrint(35, 0,$field[1]);
+	$sheet->MVPrint(65, 0,$field[3]);
 }
 #END
 
@@ -154,11 +154,11 @@ sub BREAK_1($$$$) {
 #ORIG LINE                                    --------------- -------------- --------------
 	$sheet->MVPrint(35, 0,"--------------- -------------- --------------");
 #ORIG LINE Totals of Invoice @F0              @F1            @F2            @F3
-	$sheet->MVPrint(35, 1,$field[1]);
 	$sheet->MVPrint(0, 1,"Totals of Invoice ");
+	$sheet->MVPrint(50, 1,$field[2]);
+	$sheet->MVPrint(35, 1,$field[1]);
 	$sheet->MVPrint(18, 1,$field[0]);
 	$sheet->MVPrint(65, 1,$field[3]);
-	$sheet->MVPrint(50, 1,$field[2]);
 #ORIG LINE 
 #ORIG LINE 
 #ORIG LINE 
@@ -179,11 +179,11 @@ sub BREAK_2($$$$) {
 #ORIG LINE                                    --------------- -------------- --------------
 	$sheet->MVPrint(35, 0,"--------------- -------------- --------------");
 #ORIG LINE Totals of agent @F0                @F1            @F2            @F3
-	$sheet->MVPrint(35, 1,$field[1]);
 	$sheet->MVPrint(0, 1,"Totals of agent ");
-	$sheet->MVPrint(65, 1,$field[3]);
 	$sheet->MVPrint(50, 1,$field[2]);
 	$sheet->MVPrint(16, 1,$field[0]);
+	$sheet->MVPrint(35, 1,$field[1]);
+	$sheet->MVPrint(65, 1,$field[3]);
 #ORIG LINE 
 #ORIG LINE 
 #ORIG LINE 
@@ -206,9 +206,9 @@ sub BREAK_2($$$$) {
 	my %rep_breaks = ();
 	$rep_breaks{0} = \&BREAK_1;
 	$rep_breaks{2} = \&BREAK_2;
-	my $source = new Sybsource(File => "sybase.cfg",
+	my $source = new Data::Reporter::Sybsource(File => "sybase.cfg",
 		Query => 'select d.flfactura, clcliente, clfuerzavta, clruta, clproducto, mnprecxpzas, mnoftadesc, mndescuento from kdfactura d, kgfactura g where d.flfactura = g.flfactura and clstatusfact = "GU" and clcliente = 5982243 order by clfuerzavta, flfactura');
-	my $report = new Reporter();
+	my $report = new Data::Reporter();
 	$report->configure(
 		Width	=> 80,
 		Height	=> 66,

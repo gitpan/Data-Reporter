@@ -8,7 +8,7 @@ VisSection - handler to manipulate sections in VisRep.pl.
 
 	use Data::Reporter::VisSection;
 
-	$section = new VisSection();
+	$section = new Data::Reporter::VisSection();
 	$section->configure(Name => 'mydetail',
 			Lines => ('line 1', 'line 2', 'line 3'),
 			Code => "print 'this is the detail section\n';",
@@ -138,7 +138,7 @@ from Reporter module
 
 =cut
 
-package VisSection;
+package Data::Reporter::VisSection;
 use Carp;
 use strict;
 

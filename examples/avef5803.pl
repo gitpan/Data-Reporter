@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 use strict;
-use Data::Reporter::Reporter;
+use Data::Reporter;
 use Data::Reporter::RepFormat;
 use Data::Reporter::Filesource;
 
@@ -89,8 +89,8 @@ sub FINAL($$$$) {
 	$prefartot = 0.0;	
 	$totnotas = 0;	
 	$filial = nomb_filial();
-	my $source = new Filesource(File => "ajusbena.rep");
-	my $report = new Reporter();
+	my $source = new Data::Reporter::Filesource(File => "ajusbena.rep");
+	my $report = new Data::Reporter();
 	$report->configure(
 		Width	=> 105,
 		Height	=> 66,

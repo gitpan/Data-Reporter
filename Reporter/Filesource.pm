@@ -8,7 +8,7 @@ Filesource - Reporter handler for plain text information
 
 use Data::Reporter::Filesource;
 
- $source = new Filesource(File => $file);
+ $source = new Data::Reporter::Filesource(File => $file);
 #			$file 			- source filename
 
  $subru = sub {print "record -> $_\n"};
@@ -35,11 +35,13 @@ For each record in the file, call the function $subru, passing the record as a p
 
 =cut
 
-package Filesource;
-@ISA =  qw(Datasource);
+package Data::Reporter::Filesource;
+use Data::Reporter::Datasource;
+use Exporter;
+@EXPORT = qw(new);
+@ISA =  qw(Data::Reporter::Datasource);
 use strict;
 use Carp;
-use Data::Reporter::Datasource;
 
 sub new (%) {
 	my $class = shift;

@@ -8,7 +8,7 @@ Sybsource - Reporter Handler for sybase connection
 
 	use Data::Reporter::Sybsource;
 
-	$source = new Sybsource(File => $file,
+	$source = new Data::Reporter::Sybsource(File => $file,
 				Arguments => $info,
 				Query => $query);
 
@@ -52,12 +52,12 @@ For each record of the query result, calls the function $subru, sending the reco
 
 =cut
 
-package Sybsource;
+package Data::Reporter::Sybsource;
 use Sybase::Sybperl;
 use Sybase::DBlib;
 use Carp;
 use Data::Reporter::Datasource;
-@ISA =  qw(Datasource);
+@ISA =  qw(Data::Reporter::Datasource);
 use strict;
 
 sub new (%) {

@@ -9,7 +9,7 @@ Reporter - Report generator.
 
  use strict;
  use Data::Reporter::RepFormat;
- use Data::Reporter::Reporter;
+ use Data::Reporter;
  use Data::Reporter::Filesource;
 
  sub HEADER($$$$) {
@@ -32,8 +32,8 @@ Reporter - Report generator.
 
  #main
  {
-    $source = new Filesource(File => "inputfile");
-    my $report = new Reporter();
+    $source = new Data::Reporter::Filesource(File => "inputfile");
+    my $report = new Data::Reporter();
     $report->configure(
         Width => 105,
         Height => 66,
@@ -271,15 +271,16 @@ This approach allows to have diferent data sources. At this point the only sourc
 
 =cut
 
-package Reporter;
-$VERSION = 1.0;
+package Data::Reporter;
+use vars qw($myself @ISA $VERSION);
+$VERSION = "1.0";
+use Exporter();
+@ISA = qw(Exporter);
 use Data::Reporter::RepFormat;
 use Data::Reporter::Datasource;
 use Carp;
 use English;
 use File::Copy;
-use strict;
-use vars qw($myself);
 $|=1;
 
 sub new (%) {
@@ -409,10 +410,10 @@ sub _create_forms($) {
 	my $self= shift;
 
 	#form for title, header and footer
-	$self->{FORMATFORM} = new RepFormat($self->{WIDTH}, $self->{HEIGHT});
+	$self->{FORMATFORM} = new Data::Reporter::RepFormat($self->{WIDTH}, $self->{HEIGHT});
 
 	#form from details and breaks
-	$self->{DATAFORM} = new RepFormat($self->{WIDTH}, $self->{HEIGHT});
+	$self->{DATAFORM} = new Data::Reporter::RepFormat($self->{WIDTH}, $self->{HEIGHT});
 }
 
 sub _getparam(%){
@@ -433,8 +434,8 @@ sub _getparam(%){
 			$self->{SUBPRINT} = $param{$key};
 		} elsif ($key eq "Source") {
 			$self->{SOURCE} = $param{$key};
-			croak "parameter Source is not a Datasource descendent\n"
-							unless ($self->{SOURCE}->isa("Datasource"));
+			croak "parameter Source is not a Data::Reporter::Datasource descendent\n"
+							unless ($self->{SOURCE}->isa("Data::Reporter::Datasource"));
 		} elsif ($key eq "Breaks") {
 			$self->_gen_breaks_info($param{$key});
 		} elsif ($key eq "File_name") {
@@ -735,4 +736,7 @@ sub _end_report($) {
 	copy "$self->{OUTPUTPATH}/report.out", $self->{FILE_NAME};
 }
 
+sub DataReporterVersion {
+	return $Data::Reporter::VERSION;
+}
 1;

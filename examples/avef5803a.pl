@@ -5,7 +5,7 @@
 #SECTION: DEFAULT_USES 0
 #CODE AREA
 use strict;
-use Data::Reporter::Reporter;
+use Data::Reporter;
 use Data::Reporter::RepFormat;
 use Data::Reporter::Filesource;
 #END
@@ -136,8 +136,8 @@ sub FINAL($$$$) {
 
 #SECTION: DEFAULT_MAIN 0
 #CODE AREA
-	my $source = new Filesource(File => "ajusbena.rep");
-	my $report = new Reporter();
+	my $source = new Data::Reporter::Filesource(File => "ajusbena.rep");
+	my $report = new Data::Reporter();
 	$report->configure(
 		Width	=> 105,
 		Height	=> 66,

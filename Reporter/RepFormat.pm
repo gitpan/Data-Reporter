@@ -8,7 +8,7 @@ RepFormat	- Allows text formatting with simple instructions, mapping to a user-d
 
 	use Data::Reporter::RepFormat;
 
-	$sheet = new RepFormat($cols, $rows);
+	$sheet = new Data::Reporter::RepFormat($cols, $rows);
 	$sheet->Move(0,3);
 	$sheet->Print('123');
 	$sheet->Out();
@@ -78,7 +78,7 @@ Returns $number as a string with commas (123456789.90 -> 123,456,789.90)
 
 =cut
 
-package RepFormat;
+package Data::Reporter::RepFormat;
 use strict;
 use Carp;
 

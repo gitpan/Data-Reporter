@@ -270,7 +270,7 @@ sub save() {
 	#print uses section
 	print OUTPUTFILE "#SECTION: DEFAULT_USES 0\n";
 	print OUTPUTFILE "#CODE AREA\n";
-	$visrep->{USES_EXTRACODE} = "use strict;\nuse Data::Reporter::Reporter;\n".
+	$visrep->{USES_EXTRACODE} = "use strict;\nuse Data::Reporter;\n".
 											"use Data::Reporter::RepFormat;\n";
 	if ($visrep->{SOURCE} eq "Filesource") {
 		$visrep->{USES_EXTRACODE} .= "use Data::Reporter::Filesource;\n";
@@ -328,19 +328,19 @@ sub save() {
 		}
 	}
 	if ($visrep->{SOURCE} eq "Filesource") {
-		$code .= "\tmy \$source = new Filesource(File => ".
+		$code .= "\tmy \$source = new Data::Reporter::Filesource(File => ".
 					"\"$visrep->{SOURCEFILENAME}\");\n";
 	} else {
 		if ($visrep->{CONNECTION} eq "file") {
-			$code .= "\tmy \$source = new $visrep->{SOURCE}(File => ".
+			$code .= "\tmy \$source = new Data::Reporter::$visrep->{SOURCE}(File => ".
 						"\"$visrep->{CONNECTIONFILENAME}\",\n";
 		}elsif ($visrep->{CONNECTION} eq "arguments") {
-			$code .= "\tmy \$source = new $visrep->{SOURCE}(Arguments => ".
+			$code .= "\tmy \$source = new Data::Reporter::$visrep->{SOURCE}(Arguments => ".
 						"\@ARGV,\n";
 		}
 		$code .= "\t\tQuery => '$visrep->{QUERY}');\n";
 	}
-	$code .= "\tmy \$report = new Reporter();\n";
+	$code .= "\tmy \$report = new Data::Reporter();\n";
 	#print report configure"
 	$code .= "\t\$report->configure(\n";
 	$code .= "\t\tWidth\t=> $visrep->{VSIZEX},\n";
@@ -726,7 +726,7 @@ sub parse_file() {
 					my $name_break = "BREAK_".$nbreak;
 					#create break section
 
-					$visrep->{$name_break} = VisSection->new(Size => 5,
+					$visrep->{$name_break} = Data::Reporter::VisSection->new(Size => 5,
 												Name  => "$name_break",
 												Width	=> $visrep->{VSIZEX},
 											Break_field => $break_field,
@@ -808,7 +808,7 @@ sub insert_sec($) {
 			return 1;
 		}
 		#create final section
-		$visrep->{FINAL_SEC} = VisSection->new(Size		=> 5,
+		$visrep->{FINAL_SEC} = Data::Reporter::VisSection->new(Size		=> 5,
 												Name	=> "FINAL",
 												Width	=> $visrep->{VSIZEX});
 		my $menu = $visrep->{SECTIONMENU};
@@ -827,7 +827,7 @@ sub insert_sec($) {
 			return 1;
 		}
 		#create footer section
-		$visrep->{FOOTER_SEC} = VisSection->new(Size	=> 5,
+		$visrep->{FOOTER_SEC} = Data::Reporter::VisSection->new(Size	=> 5,
 												Name	=> "FOOTER",
 												Width	=> $visrep->{VSIZEX});
 		my $menu = $visrep->{SECTIONMENU};
@@ -844,7 +844,7 @@ sub insert_sec($) {
 		$visrep->{VBREAKS}++;
 		my $name_break = "BREAK_".$visrep->{VBREAKS};
 		#create break section
-		$visrep->{$name_break} = VisSection->new(Size	=> 5,
+		$visrep->{$name_break} = Data::Reporter::VisSection->new(Size	=> 5,
 												Name	=> "$name_break",
 												Width	=> $visrep->{VSIZEX});
 		my $menu = $visrep->{SECTIONMENU};
@@ -908,34 +908,34 @@ sub defaults() {
 	$visrep->{VSIZEY} = 66;
 
 	#create header section
-	$visrep->{HEADER_SEC} = VisSection->new(Size	=> 5,
+	$visrep->{HEADER_SEC} = Data::Reporter::VisSection->new(Size	=> 5,
 											Name	=> "HEADER",
 											Width	=> $visrep->{VSIZEX});
 
 	#create detail section
-	$visrep->{TITLE_SEC} = VisSection->new(Size		=> 5,
+	$visrep->{TITLE_SEC} = Data::Reporter::VisSection->new(Size		=> 5,
 											Name	=> "TITLE",
 											Width	=> $visrep->{VSIZEX});
 
 	#create detail section
-	$visrep->{DETAIL_SEC} = VisSection->new(Size	=> 5,
+	$visrep->{DETAIL_SEC} = Data::Reporter::VisSection->new(Size	=> 5,
 											Name	=> "DETAIL",
 											Width	=> $visrep->{VSIZEX});
 
 	#create uses section
-	$visrep->{USES_SEC} = VisSection->new(Size 			=> 0,
+	$visrep->{USES_SEC} = Data::Reporter::VisSection->new(Size 			=> 0,
 											Name  		=> "USES",
 											Only_code   => 1,
 											Width		=> $visrep->{VSIZEX});
 
 	#create detail section
-	$visrep->{FUNCTIONS_SEC} = VisSection->new(Size		=> 0,
+	$visrep->{FUNCTIONS_SEC} = Data::Reporter::VisSection->new(Size		=> 0,
 												Name	=> "FUNCTIONS",
 											Only_code   => 1,
 											Width		=> $visrep->{VSIZEX});
 
 	#create detail section
-	$visrep->{MAIN_SEC} = VisSection->new(Size		=> 0,
+	$visrep->{MAIN_SEC} = Data::Reporter::VisSection->new(Size		=> 0,
 											Name	=> "MAIN",
 										Only_code   => 1,
 											Width	=> $visrep->{VSIZEX});
